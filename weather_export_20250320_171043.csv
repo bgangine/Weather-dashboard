@@ -1,0 +1,2 @@
+id,city,date,temperature,humidity,wind_speed,air_quality,uv_index,latitude,longitude,created_at
+1,Chicago,2025-03-20,5.41,42.0,4.63,,,41.85,-87.65,2025-03-20 22:10:26
