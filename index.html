@@ -2,64 +2,65 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Weather Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Ensure styles.css has the gradient background, floating text, and icons styling -->
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather Wonder</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
-<body>
-  <!-- Floating name across the top of the page -->
-  <div class="floating-name">Developed by Bhavana Gangineni</div>
+<body class="min-h-screen flex flex-col justify-center items-center text-gray-800">
 
-  <div class="container">
-    <h1>Weather Dashboard</h1>
+  <!-- Intro -->
+  <div class="text-center mb-8 animate-fadeIn">
+    <h1 class="text-5xl font-bold tracking-wide">🌦️ Weather Wonder</h1>
+    <p class="mt-2 text-lg">Explore weather & plan your next move</p>
+  </div>
 
-    <!-- Section: Weather Lookup -->
-    <div class="section">
-      <h2>Check Weather by City & Date</h2>
-      <div class="form-group">
-        <label for="cityInput">City:</label>
-        <input type="text" id="cityInput" placeholder="Enter city name..." />
-      </div>
-      <div class="form-group">
-        <label for="dateInput">Date (YYYY-MM-DD):</label>
-        <input type="date" id="dateInput" />
-      </div>
-      <button id="searchBtn" class="btn-primary">Get Weather</button>
-    </div>
+  <!-- Search Box -->
+  <div class="glass-card p-6 w-full max-w-2xl animate-slideIn">
+    <form id="weatherForm" class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <input id="cityInput" type="text" placeholder="Enter city name..." class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+      <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all duration-300">Search</button>
+    </form>
 
-    <!-- Display Weather Results + Animated Weather Container -->
-    <div id="weatherResult" class="result-box"></div>
-    <div id="weatherAnimation" class="weather-animation"></div>
-
-    <!-- Section: Export Weather Data -->
-    <div class="section">
-      <h2>Export Weather Records</h2>
-      <div class="form-group">
-        <label for="exportCity">City (Optional):</label>
-        <input type="text" id="exportCity" placeholder="Enter city name..." />
-      </div>
-      <div class="form-group">
-        <label for="startDate">Start Date (YYYY-MM-DD):</label>
-        <input type="date" id="startDate" />
-      </div>
-      <div class="form-group">
-        <label for="endDate">End Date (YYYY-MM-DD):</label>
-        <input type="date" id="endDate" />
-      </div>
-      <button id="exportBtn" class="btn-secondary">Export CSV</button>
+    <!-- Toggle & Export -->
+    <div class="mt-4 flex justify-between items-center">
+      <label class="flex items-center space-x-2">
+        <span>ºC / ºF</span>
+        <input type="checkbox" id="unitToggle" class="toggle" />
+      </label>
+      <button id="exportBtn" class="px-4 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600">Download PDF</button>
     </div>
   </div>
 
-  <!-- Weather icons at the bottom of the page -->
-  <div class="weather-icons">
-    <!-- Example icons; feel free to replace with your own or additional icons -->
-    <img src="https://cdn-icons-png.flaticon.com/512/414/414927.png" alt="Cloud Icon" />
-    <img src="https://cdn-icons-png.flaticon.com/512/1163/1163661.png" alt="Rain Icon" />
-    <img src="https://cdn-icons-png.flaticon.com/512/869/869869.png" alt="Sun Icon" />
+  <!-- Weather Display -->
+  <div id="weatherResult" class="mt-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 px-4 hidden">
+    <!-- Left: Weather -->
+    <div class="glass-card p-6">
+      <h2 class="text-xl font-semibold mb-2">Weather Info</h2>
+      <div id="weatherData" class="space-y-1 text-gray-700">
+        <!-- Weather data goes here -->
+      </div>
+    </div>
+
+    <!-- Right: Travel -->
+    <div class="glass-card p-6">
+      <h2 class="text-xl font-semibold mb-2">Travel Recommendations</h2>
+      <div id="travelData" class="space-y-2">
+        <!-- Recommendations here -->
+      </div>
+    </div>
   </div>
 
-  <!-- Your existing JavaScript logic for fetching and exporting data -->
-  <script src="app.js"></script>
+  <!-- Forecast -->
+  <div id="forecast" class="mt-6 max-w-4xl w-full px-4 hidden">
+    <h2 class="text-lg font-semibold mb-2 text-white">5-Day Forecast</h2>
+    <div id="forecastCards" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <!-- Forecast cards go here (each will have class="forecast-card") -->
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
 </body>
 </html>
