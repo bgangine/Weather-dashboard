@@ -1,102 +1,180 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Elements for weather lookup
-    const cityInput = document.getElementById('cityInput');
-    const dateInput = document.getElementById('dateInput');
-    const searchBtn = document.getElementById('searchBtn');
-    const weatherResult = document.getElementById('weatherResult');
-  
-    // Elements for export
-    const exportCity = document.getElementById('exportCity');
-    const startDate = document.getElementById('startDate');
-    const endDate = document.getElementById('endDate');
-    const exportBtn = document.getElementById('exportBtn');
-  
-    // The animated container
-    const weatherAnimation = document.getElementById('weatherAnimation');
-  
-    // Simple function to guess a weather condition
-    function getWeatherCondition(temperature, windSpeed) {
-      // Example logic:
-      // - Very cold => snow
-      // - High wind => storm
-      // - Hot => sunny
-      // - Otherwise => cloudy
-      if (temperature <= 0) {
-        return 'snow';
-      } else if (windSpeed >= 10) {
-        return 'storm';
-      } else if (temperature >= 25) {
-        return 'sunny';
-      } else {
-        return 'cloudy';
+const weatherForm = document.getElementById('weatherForm');
+const cityInput = document.getElementById('cityInput');
+const unitToggle = document.getElementById('unitToggle');
+const weatherResult = document.getElementById('weatherResult');
+const weatherData = document.getElementById('weatherData');
+const travelData = document.getElementById('travelData');
+const exportBtn = document.getElementById('exportBtn');
+const forecast = document.getElementById('forecast');
+const forecastCards = document.getElementById('forecastCards');
+
+const OPENWEATHER_API = "45e97eb6e5e89357830f2a793be16338";
+
+let currentUnit = "metric"; // default: Celsius
+
+weatherForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const city = cityInput.value.trim();
+  if (!city) return;
+
+  weatherData.innerHTML = "Loading...";
+  travelData.innerHTML = "";
+  forecastCards.innerHTML = "";
+
+  try {
+    const unitParam = currentUnit === "metric" ? "metric" : "imperial";
+
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=${unitParam}&appid=${OPENWEATHER_API}`);
+    const data = await res.json();
+
+    if (data.cod !== 200) {
+      weatherData.innerHTML = `<p class="text-red-500">City not found</p>`;
+      return;
+    }
+
+    renderWeather(data);
+    await suggestTravel(city, data.weather[0].main.toLowerCase(), data.main.temp);
+    await renderForecast(city);
+    weatherResult.classList.remove('hidden');
+    forecast.classList.remove('hidden');
+
+    await fetch("/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        city,
+        unit: currentUnit
+      })
+    });
+
+  } catch (err) {
+    weatherData.innerHTML = `<p class="text-red-500">Error fetching data</p>`;
+    console.error(err);
+  }
+});
+
+unitToggle.addEventListener("change", () => {
+  currentUnit = unitToggle.checked ? "imperial" : "metric";
+});
+
+function renderWeather(data) {
+  const temp = data.main.temp;
+  const weather = data.weather[0].main;
+  const humidity = data.main.humidity;
+  const wind = data.wind.speed;
+  const pressure = data.main.pressure;
+  const visibility = data.visibility / 1000;
+  const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString();
+  const sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString();
+
+  weatherData.innerHTML = `
+    <p><strong>Temperature:</strong> ${temp}° ${currentUnit === 'metric' ? 'C' : 'F'}</p>
+    <p><strong>Condition:</strong> ${weather}</p>
+    <p><strong>Humidity:</strong> ${humidity}%</p>
+    <p><strong>Wind Speed:</strong> ${wind} ${currentUnit === 'metric' ? 'm/s' : 'mph'}</p>
+    <p><strong>Pressure:</strong> ${pressure} hPa</p>
+    <p><strong>Visibility:</strong> ${visibility} km</p>
+    <p><strong>Sunrise:</strong> ${sunrise}</p>
+    <p><strong>Sunset:</strong> ${sunset}</p>
+  `;
+}
+
+// 🌍 Dynamic Travel Suggestions with Serper image integration
+async function suggestTravel(city, weatherCondition, temp) {
+  try {
+    const placeRes = await fetch('/places', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city, weather: weatherCondition })
+    });
+
+    const data = await placeRes.json();
+    const places = data.places;
+
+    let imageBlocks = ``;
+
+    for (const place of places) {
+      const query = `${place} ${city}`;
+      const imgRes = await fetch('/image-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+
+      const imgData = await imgRes.json();
+
+      if (imgData.length > 0) {
+        const { thumbnail, title, link } = imgData[0];
+        imageBlocks += `
+          <div>
+            <a href="${link}" target="_blank">
+              <img src="${thumbnail}" alt="${title}" class="rounded-xl shadow w-full h-40 object-cover" />
+            </a>
+            <p class="text-xs mt-1 text-gray-600">${title}</p>
+          </div>
+        `;
       }
     }
-  
-    // Handle weather lookup
-    searchBtn.addEventListener('click', async () => {
-      const city = cityInput.value.trim();
-      const dateVal = dateInput.value.trim();
-  
-      if (!city || !dateVal) {
-        alert("Please enter both city and date.");
-        return;
-      }
-  
-      try {
-        // Fetch weather from /api/weather?city=...&date=...
-        const response = await fetch(`/api/weather?city=${encodeURIComponent(city)}&date=${encodeURIComponent(dateVal)}`);
-        const data = await response.json();
-  
-        if (data.error) {
-          weatherResult.innerHTML = `<p class="error">${data.error}</p>`;
-          // Reset animation
-          weatherAnimation.className = 'weather-animation';
-        } else {
-          // Display the weather info
-          weatherResult.innerHTML = `
-            <h3>Weather for ${data.city} on ${data.date}</h3>
-            <p><strong>Temperature:</strong> ${data.temperature ?? 'N/A'} °C</p>
-            <p><strong>Humidity:</strong> ${data.humidity ?? 'N/A'} %</p>
-            <p><strong>Wind Speed:</strong> ${data.wind_speed ?? 'N/A'} m/s</p>
-            <p><strong>Air Quality:</strong> ${data.air_quality !== null ? data.air_quality : 'N/A'}</p>
-            <p><strong>UV Index:</strong> ${data.uv_index !== null ? data.uv_index : 'N/A'}</p>
-            <p><strong>Latitude:</strong> ${data.latitude ?? 'N/A'}</p>
-            <p><strong>Longitude:</strong> ${data.longitude ?? 'N/A'}</p>
-            <p><strong>Last Updated:</strong> ${data.created_at}</p>
-          `;
-  
-          // Determine animation based on temperature + wind speed
-          const temp = parseFloat(data.temperature) || 0;
-          const wind = parseFloat(data.wind_speed) || 0;
-          const conditionClass = getWeatherCondition(temp, wind);
-  
-          // Apply the animation class
-          weatherAnimation.className = `weather-animation ${conditionClass}`;
-        }
-      } catch (err) {
-        weatherResult.innerHTML = `<p class="error">Error fetching data: ${err}</p>`;
-        // Reset animation
-        weatherAnimation.className = 'weather-animation';
-      }
+
+    travelData.innerHTML = `
+      <p><strong>Top Spots in ${city}:</strong></p>
+      <p class="text-sm text-gray-500">Best for ${weatherCondition.toLowerCase()} weather (${Math.round(temp)}° ${currentUnit === 'metric' ? 'C' : 'F'})</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+        ${imageBlocks}
+      </div>
+    `;
+
+  } catch (err) {
+    travelData.innerHTML = `<p class="text-red-500">Could not fetch travel suggestions.</p>`;
+    console.error(err);
+  }
+}
+
+async function renderForecast(city) {
+  const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=${currentUnit}&appid=${OPENWEATHER_API}`);
+  const data = await res.json();
+
+  const daily = {};
+  for (const item of data.list) {
+    const date = item.dt_txt.split(" ")[0];
+    if (!daily[date]) daily[date] = [];
+    daily[date].push(item);
+  }
+
+  const sliced = Object.entries(daily).slice(0, 5);
+
+  forecastCards.innerHTML = sliced.map(([date, list]) => {
+    const temps = list.map(i => i.main.temp);
+    const avgTemp = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1);
+    const icon = list[0].weather[0].icon;
+    return `
+      <div class="forecast-card p-4 text-center">
+        <p class="font-bold">${new Date(date).toLocaleDateString()}</p>
+        <img src="http://openweathermap.org/img/wn/${icon}@2x.png" class="mx-auto w-16" />
+        <p>${avgTemp}° ${currentUnit === 'metric' ? 'C' : 'F'}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+// 📄 Export to PDF
+exportBtn.addEventListener("click", () => {
+  const pdfContent = document.getElementById("weatherResult");
+
+  html2canvas(pdfContent).then((canvas) => {
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jspdf.jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: "a4",
     });
-  
-    // Handle export
-    exportBtn.addEventListener('click', () => {
-      // Build query params
-      const cityParam = exportCity.value.trim();
-      const startParam = startDate.value.trim();
-      const endParam = endDate.value.trim();
-  
-      let url = '/api/export?';
-      if (cityParam) url += `city=${encodeURIComponent(cityParam)}&`;
-      if (startParam) url += `start_date=${encodeURIComponent(startParam)}&`;
-      if (endParam) url += `end_date=${encodeURIComponent(endParam)}&`;
-  
-      // Remove trailing '&' or '?' if any
-      url = url.replace(/[&?]$/, '');
-  
-      // Navigate to the export endpoint to trigger CSV download
-      window.location.href = url;
-    });
+
+    const width = pdf.internal.pageSize.getWidth();
+    const height = (canvas.height * width) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, width, height);
+    pdf.save("weather_report.pdf");
   });
-  
+});
